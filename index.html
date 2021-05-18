@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  </head>
+  <body>
+    <form>
+      <h1>单文件上传</h1>
+      <input class="file" type="file" />
+      <button type="submit" onclick="handleClick(event, '.file', 'upload')">
+        提交
+      </button>
+      <h1>多文件上传</h1>
+      <input class="files" type="file" multiple />
+      <button type="submit" onclick="handleClick(event, '.files', 'uploads')">
+        提交
+      </button>
+      <h1>视频上传（切片、断点续传）</h1>
+      <h2>进度</h2>
+      <input class="video" type="file" />
+      <button type="submit" onclick="handleVideo(event, '.video', 'video')">
+        提交
+      </button>
+    </form>
+    <script>
+      // 上传普通文件
+      const handleClick = async (event, name, url) => {
+        // 阻止浏览器默认表单事件
+        event.preventDefault();
+        // 获取表单文件列表
+        let files = document.querySelector(name).files;
+        // 创建formData
+        let formData = new FormData();
+        // 单\多文件上传
+        await [...files].forEach((element) => {
+          formData.append("file", element);
+        });
+        // 请求接口
+        axios
+          .post(`http://localhost:8080/${url}`, formData)
+          .then(function (response) {
+            return response.json();
+          })
+          .then(function (data) {
+            console.log(data);
+          });
+      };
+
+      // 上传视频（切片，模拟断点续传）
+      let count = 0; // 记录需要上传的文件下标
+      const handleVideo = async (event, name, url) => {
+        // 阻止浏览器默认表单事件
+        event.preventDefault();
+        let currentSize = document.querySelector("h2");
+        let files = document.querySelector(name).files;
+        // 首先请求接口，获取服务器是否存在此文件
+        // count为0则是第一次上传，count不为0则服务器存在此文件，返回已上传的切片数
+        count = await handleCancel(files[0]);
+        // 默认切片数量
+        const sectionLength = 100;
+
+        // 申明存放切片的数组对象
+        let fileCurrent = [];
+        // 循环file文件对象
+        for (const file of [...files]) {
+          // 得出每个切片的大小
+          let itemSize = Math.ceil(file.size / sectionLength);
+          // 循环文件size，文件blob存入数组
+          let current = 0;
+          for (current; current < file.size; current += itemSize) {
+            fileCurrent.push({ file: file.slice(current, current + itemSize) });
+          }
+          // 可以模拟手动取消请求
+          const CancelToken = axios.CancelToken;
+          const source = CancelToken.source();
+          // 当断点续传时，处理切片数量，已上传切片则不需要再次请求上传
+          fileCurrent =
+            count === 0 ? fileCurrent : fileCurrent.slice(count, sectionLength);
+          // 循环切片请求接口
+          for (const [index, item] of fileCurrent.entries()) {
+            // 模拟请求暂停 || 网络断开
+            if (index > 90) {
+              source.cancel("取消请求");
+            }
+            // 存入文件相关信息
+            // file为切片blob对象
+            // filename为文件名
+            // index为当前切片数
+            // total为总切片数
+            let formData = new FormData();
+            formData.append("file", item.file);
+            formData.append("filename", file.name);
+            formData.append("total", sectionLength);
+            formData.append("index", index + count + 1);
+
+            await axios({
+              url: `http://localhost:8080/${url}`,
+              method: "POST",
+              data: formData,
+              cancelToken: source.token,
+            })
+              .then((response) => {
+                // 返回数据显示进度
+                currentSize.innerHTML = `进度${response.data.size}%`;
+              })
+              .catch((err) => {
+                console.log(err);
+              });
+          }
+        }
+      };
+
+      // 请求接口，查询上传文件是否存在
+      // count为0表示不存在，count不为0则已上传对应切片数
+      const handleCancel = (file) => {
+        return axios({
+          method: "post",
+          url: "http://localhost:8080/getSize",
+          headers: { "Content-Type": "application/json; charset = utf-8" },
+          data: {
+            fileName: file.name,
+          },
+        })
+          .then((res) => {
+            return res.data.count;
+          })
+          .catch((err) => {
+            console.log(err);
+          });
+      };
+    </script>
+  </body>
+</html>
