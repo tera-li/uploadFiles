@@ -1,14 +1,17 @@
 // 引入express
 // 构建web服务器 && 构建api服务器
 const express = require("express");
-const res = require("./config/header");
-const upload = require("./upload_file");
 // 引入multer
 // multer中间件对multipart/form-data格式的数据进行操作
 const multer = require("multer");
 const path = require("path");
 // 引入post的body解析
 const bodyParser = require("body-parser");
+const format = require('silly-datetime')
+const mkdirp = require('mkdirp')
+
+const res = require("./config/header");
+const upload = require("./upload_file");
 
 // 实例化multer中间件
 const multerMidd = multer({
@@ -16,7 +19,10 @@ const multerMidd = multer({
   storage: multer.diskStorage({
     // 存储目录（当前img目录）
     destination: function (req, file, cb) {
-      cb(null, path.resolve(__dirname + "/img"));
+      const date = format.format(new Date, 'YYYYMMDD')
+      const url = path.resolve(__dirname + `/img/${date}`)
+      mkdirp.sync(url)
+      cb(null, url);
     },
     // 需要存储的文件名
     filename: function (req, file, cb) {
@@ -45,6 +51,9 @@ let getFiles = multerMidd.array("file");
 const app = express();
 // 处理所有响应，设置响应头
 app.all("*", res.restHeader);
+app.get('/', (req, res) => {
+  res.end('启动成功')
+})
 // 单文件上传
 app.post("/upload", getFile, upload.file);
 // 多文件上传
@@ -56,4 +65,6 @@ app.use(bodyParser.json({ type: "application/*+json" }));
 app.post("/getSize", upload.getSize);
 
 // 开启本地端口侦听
-app.listen(8080);
+app.listen(8080, () => {
+  console.log('server running in the http://localhost:8080')
+});

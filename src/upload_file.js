@@ -1,3 +1,12 @@
+// 文件上传
+const formidable = require("formidable");
+// 文件系统模块
+const fs = require("fs");
+// 系统路径模块
+const path = require("path");
+// 创建目录
+const mkdirp = require('mkdirp')
+
 // 单文件上传
 module.exports.file = (req, res) => {
   let errMsg = "";
@@ -18,13 +27,6 @@ module.exports.files = (req, res) => {
   });
 };
 
-// 文件上传
-const formidable = require("formidable");
-// 文件系统模块
-const fs = require("fs");
-// 系统路径模块
-const path = require("path");
-
 // 视频上传(切片)
 const handleStream = (item, writeStream) => {
   // 读取对应目录文件buffer
@@ -35,12 +37,15 @@ const handleStream = (item, writeStream) => {
   fs.unlink(item, () => {});
 };
 
+// 视频上传
 module.exports.video = (req, res) => {
   // 创建解析对象
   const form = new formidable.IncomingForm();
   // 设置视频文件上传路径
   let dirPath = path.join(__dirname, "video");
   form.uploadDir = dirPath;
+  // 创建video临时目录
+  mkdirp.sync(form.uploadDir)
   // 是否保留上传文件名后缀
   form.keepExtensions = true;
   form.parse(req, async (err, fields, file) => {

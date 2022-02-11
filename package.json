@@ -5,7 +5,7 @@
   "description": "node服务器，实现单文件上传、多文件上传、视频上传（切片，stream写入流）",
   "main": "./src/upload_file.js",
   "scripts": {
-    "server": "node src/api.js"
+    "server": "nodemon src/main.js"
   },
   "repository": {
     "type": "git",
@@ -17,7 +17,12 @@
     "express": "^4.17.1",
     "formidable": "^1.2.2",
     "fs": "0.0.1-security",
+    "mkdirp": "^1.0.4",
     "multer": "^1.4.2",
-    "prettier": "^2.3.0"
+    "silly-datetime": "^0.1.2"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.15",
+    "prettier": "^2.5.1"
   }
 }
