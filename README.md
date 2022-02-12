@@ -6,5 +6,5 @@ npm run install
 
 npm run server
 
-页面在index.html
+前端上传页面在index.html，采用axios进行交互
 ```
